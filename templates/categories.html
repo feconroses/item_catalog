@@ -1,10 +1,11 @@
 {% extends "base.html" %}
+
 {% block title %}All categories - Items Catalog Project{% endblock %}
 
 {% block head %}
   {{ super() }}
   <style type="text/css">
-    .important { ; }
+    .important {}
   </style>
 {% endblock %}
 
@@ -25,43 +26,32 @@
 {% endwith %}
 </div>
 
-	<div class="row padding-top padding-bottom">
-		<div class="col-md-1"></div>
-		<div class="col-md-10 padding-none">
-			<a href="{{url_for('newCategory')}}">
-				<button class="btn btn-default" id="new-restaurant">
-					<span class="glyphicon glyphicon-cutlery" aria-hidden="true"></span>Create New Category
-				</button>
-			</a>
-		</div>
-		<div class="col-md-1"></div>
+<div class="row padding-top padding-bottom">
+	<div class="col-md-10 padding-none">
+		<a href="{{url_for('newCategory')}}">
+			<button class="btn btn-default" id="new-restaurant">
+				<span class="glyphicon glyphicon-cutlery" aria-hidden="true"></span>Create New Category
+			</button>
+		</a>
 	</div>
+</div>
 
 {% for category in categories %}
 
 <div>
-<a href = "{{url_for('showCategory', category_id = category.id)}}">
 	<div class="row">
-		<div class="col-md-1"></div>
-		<div class="col-md-10 category-list">
-			<h3>{{category.name}}</h3>
+		<a href = "{{url_for('showCategory', category_id = category.id)}}">
+			<div class="col-md-11 category-list">
+				<h3>{{category.name}}</h3>
+			</div>
+		</a>
+		<div class="col-md-1">
+			<div><a href="{{url_for('editCategory', category_id = category.id)}}">Edit</a></div>
+			<div><a href="{{url_for('deleteCategory', category_id = category.id)}}">Delete</a></div>
 		</div>
-		<div class="col-md-1"></div>
 	</div>
-</a>
-
-</br>
-
-<a href="{{url_for('editCategory', category_id = category.id)}}">Edit</a>
-
-</br>
-
-<a href="{{url_for('deleteCategory', category_id = category.id)}}">Delete</a>
-
 </div>
 
 {% endfor %}
 
 {% endblock %}
-
-
