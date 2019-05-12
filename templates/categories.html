@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}All categories - Items Catalog Project{% endblock %}
+{% block title %}Catalog App - All categories{% endblock %}
 
 {% block head %}
   {{ super() }}
@@ -13,15 +13,17 @@
 
 {% block content %}
 
-<div class = 'flash'>
+<div class='flash'>
 {% with messages = get_flashed_messages() %}
 {% if messages %}
 
+<div class='inside-flash'>
 <ul>
 	{% for message in messages %}
 	<li><strong>{{ message }}</strong></li>
 	{% endfor %}
 </ul>
+</div>
 {% endif %}
 {% endwith %}
 </div>

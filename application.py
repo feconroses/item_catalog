@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from database_setup import Base, Category, CategoryItem
+from database_setup import Base, Category, CategoryItem, User
 
 # Create a session and connect to a database
 engine = create_engine('sqlite:///catalog.db')
@@ -87,6 +87,7 @@ def newCategoryItem(category_id):
 	DBSession = sessionmaker(bind = engine)
 	session = DBSession()
 	# looks for a post request
+	newItemCategory = session.query(Category).filter_by(id = category_id).one()
 	if request.method == 'POST':
 		# extracts the name field from my form using request.form
 		newItem = CategoryItem(name = request.form['name'], description = request.form['description'], category_id = category_id)
@@ -95,7 +96,7 @@ def newCategoryItem(category_id):
 		flash("New category item created!")
 		return redirect(url_for('showCategory', category_id = category_id))
 	else:
-		return render_template('newcategoryitem.html', category_id = category_id)
+		return render_template('newcategoryitem.html', category_id = category_id, category = newItemCategory)
 
 # Edit items in category
 @app.route('/categories/<int:category_id>/<int:item_id>/edit',
@@ -103,6 +104,7 @@ def newCategoryItem(category_id):
 def editCategoryItem(category_id, item_id):
 	DBSession = sessionmaker(bind = engine)
 	session = DBSession()
+	editedItemCategory = session.query(Category).filter_by(id = category_id).one()
 	editedItem = session.query(CategoryItem).filter_by(id = item_id).one()
 	if request.method == 'POST':
 		if request.form['name']:
@@ -115,13 +117,14 @@ def editCategoryItem(category_id, item_id):
 		return redirect(url_for('showCategory', category_id = category_id))
 	else:
 		return render_template(
-			'editcategoryitem.html', category_id = category_id, item_id = item_id, item = editedItem)
+			'editcategoryitem.html', category_id = category_id, item_id = item_id, item = editedItem, category = editedItemCategory)
 
 # Delete a category item
 @app.route('/categories/<int:category_id>/<int:item_id>/delete', methods=['GET', 'POST'])
 def deleteCategoryItem(category_id, item_id):
 	DBSession = sessionmaker(bind = engine)
 	session = DBSession()
+	deletedItemCategory = session.query(Category).filter_by(id = category_id).one()
 	deletedItem = session.query(CategoryItem).filter_by(id =  item_id).one()
 	if request.method == 'POST':
 		session.delete(deletedItem)
@@ -130,7 +133,7 @@ def deleteCategoryItem(category_id, item_id):
 		return redirect(url_for('showCategory', category_id = category_id))
 	else:
 		return render_template(
-			'deletecategoryitem.html', item = deletedItem)
+			'deletecategoryitem.html', item = deletedItem, category = deletedItemCategory)
 
 # Start of JSON endpoints
 # Making an API Endpoint for getting all the categories (Get Request)
