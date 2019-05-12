@@ -20,6 +20,7 @@ class Category(Base):
 			'name' : self.name,
 			'id' : self.id,
 		}
+		
 class CategoryItem(Base):
 
 	__tablename__ = 'category_item'

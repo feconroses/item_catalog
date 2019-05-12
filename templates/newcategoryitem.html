@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Add new categoryitem - Items Catalog Project{% endblock %}
+
+{% block head %}
+  {{ super() }}
+  <style type="text/css">
+    .important {}
+  </style>
+{% endblock %}
+
+{% block h1 %}<h1>New Category Item</h1>{% endblock %}
+
+{% block content %}
+
+<form action="{{url_for('newCategoryItem', category_id = category_id )}}" method = 'POST'>
+
+<p>Name:</p>
+
+<input type='text' size='30' name='name'>
+
+<p>Description:</p>
+
+<input type='text' size='30' name='description'>
+
+<input type='submit' value='Create'>
+
+<a href="{{url_for('showCategory', category_id = category_id)}}">Cancel</a>
+
+</form>
+{% endblock %}

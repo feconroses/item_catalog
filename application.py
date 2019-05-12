@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from database_setup import Base, Restaurant, MenuItem
+from database_setup import Base, Category, CategoryItem
 
 # Create a session and connect to a database
 engine = create_engine('sqlite:///catalog.db')
@@ -11,6 +11,8 @@ Base.metadata.bind = engine
 app = Flask(__name__)
 
 # Start of HTML endpoints
+
+# Categories
 # Definining catalog home that shows all categories
 @app.route('/')
 @app.route('/catalog/')
@@ -50,14 +52,14 @@ def editCategory(category_id):
 		flash("Category has been edited!")
 		return redirect(url_for('showCategories'))
 	else:
-		return render_template('editcategory.html', category_id = category_id, item=editedCategory)
+		return render_template('editcategory.html', category_id = category_id, category = editedCategory)
 
 # Deleting an existing category
 @app.route('/categories/<int:category_id>/delete', methods=['GET', 'POST'])
 def deleteCategory(category_id):
 	DBSession = sessionmaker(bind = engine)
 	session = DBSession()
-	deletedCategory = session.query(Category).filter_by(id=category_id).one()
+	deletedCategory = session.query(Category).filter_by(id = category_id).one()
 	if request.method == 'POST':
 		session.delete(deletedCategory)
 		session.commit()
@@ -65,101 +67,99 @@ def deleteCategory(category_id):
 		return redirect(url_for('showCategories'))
 	else:
 		return render_template(
-			'deletecategory.html', item=deletedCategory)
+			'deletecategory.html', category = deletedCategory)
 
+# Items
 # Shows items within a category
 @app.route('/categories/<int:category_id>')
-@app.route('/restaurants/<int:category_id>/')
-@app.route('/restaurants/<int:category_id>/all')
-def showMenu(restaurant_id):
+@app.route('/categories/<int:category_id>/')
+@app.route('/categories/<int:category_id>/all')
+def showCategory(category_id):
 	DBSession = sessionmaker(bind = engine)
 	session = DBSession()
-	restaurant = session.query(Restaurant).filter_by(id = restaurant_id).one()
-	items = session.query(MenuItem).filter_by(restaurant_id = restaurant.id)
-	return render_template('menu.html', restaurant = restaurant, items = items)
+	category = session.query(Category).filter_by(id = category_id).one()
+	items = session.query(CategoryItem).filter_by(category_id = category.id)
+	return render_template('items.html', category = category, items = items)
 
-# Task 1: Create route for newMenuItem function here
-@app.route('/restaurants/<int:restaurant_id>/new', methods=['GET', 'POST'])
-def newMenuItem(restaurant_id):
+# Create new items for category
+@app.route('/categories/<int:category_id>/new', methods=['GET', 'POST'])
+def newCategoryItem(category_id):
 	DBSession = sessionmaker(bind = engine)
 	session = DBSession()
 	# looks for a post request
 	if request.method == 'POST':
 		# extracts the name field from my form using request.form
-		newItem = MenuItem(name = request.form['name'], restaurant_id = restaurant_id)
+		newItem = CategoryItem(name = request.form['name'], description = request.form['description'], category_id = category_id)
 		session.add(newItem)
 		session.commit()
-		flash("new menu item created!")
-		return redirect(url_for('showMenu', restaurant_id = restaurant_id))
+		flash("New category item created!")
+		return redirect(url_for('showCategory', category_id = category_id))
 	else:
-		return render_template('newmenuitem.html', restaurant_id = restaurant_id)
+		return render_template('newcategoryitem.html', category_id = category_id)
 
-# Task 2: Create route for editMenuItem function here
-@app.route('/restaurants/<int:restaurant_id>/<int:menu_id>/edit',
+# Edit items in category
+@app.route('/categories/<int:category_id>/<int:item_id>/edit',
 			methods=['GET', 'POST'])
-def editMenuItem(restaurant_id, menu_id):
+def editCategoryItem(category_id, item_id):
 	DBSession = sessionmaker(bind = engine)
 	session = DBSession()
-	editedItem = session.query(MenuItem).filter_by(id=menu_id).one()
+	editedItem = session.query(CategoryItem).filter_by(id = item_id).one()
 	if request.method == 'POST':
 		if request.form['name']:
 			editedItem.name = request.form['name']
+		if request.form['description']:
+			editedItem.description = request.form['description']
 		session.add(editedItem)
 		session.commit()
-		flash("menu item has been edited!")
-		return redirect(url_for('showMenu', restaurant_id=restaurant_id))
+		flash("Category item has been edited!")
+		return redirect(url_for('showCategory', category_id = category_id))
 	else:
-		# USE THE RENDER_TEMPLATE FUNCTION BELOW TO SEE THE VARIABLES YOU
-		# SHOULD USE IN YOUR EDITMENUITEM TEMPLATE
 		return render_template(
-			'editmenuitem.html', restaurant_id=restaurant_id, menu_id=menu_id, item=editedItem)
+			'editcategoryitem.html', category_id = category_id, item_id = item_id, item = editedItem)
 
-
-# Task 3: Create a route for deleteMenuItem function here
-@app.route('/restaurants/<int:restaurant_id>/<int:menu_id>/delete', methods=['GET', 'POST'])
-def deleteMenuItem(restaurant_id, menu_id):
+# Delete a category item
+@app.route('/categories/<int:category_id>/<int:item_id>/delete', methods=['GET', 'POST'])
+def deleteCategoryItem(category_id, item_id):
 	DBSession = sessionmaker(bind = engine)
 	session = DBSession()
-	deletedItem = session.query(MenuItem).filter_by(id=menu_id).one()
+	deletedItem = session.query(CategoryItem).filter_by(id =  item_id).one()
 	if request.method == 'POST':
 		session.delete(deletedItem)
 		session.commit()
-		flash("menu item has been deleted!")
-		return redirect(url_for('showMenu', restaurant_id=restaurant_id))
+		flash("Category item has been deleted!")
+		return redirect(url_for('showCategory', category_id = category_id))
 	else:
-		# USE THE RENDER_TEMPLATE FUNCTION BELOW TO SEE THE VARIABLES YOU
-		# SHOULD USE IN YOUR EDITMENUITEM TEMPLATE
 		return render_template(
-			'deletemenuitem.html', item=deletedItem)
+			'deletecategoryitem.html', item = deletedItem)
 
 # Start of JSON endpoints
-# Making an API Endpoint for Restaurants (Get Request)
-@app.route('/restaurants/JSON')
-def allRestaurantsJSON():
+# Making an API Endpoint for getting all the categories (Get Request)
+@app.route('/categories/JSON')
+def allCategoriesJSON():
 	DBSession = sessionmaker(bind = engine)
 	session = DBSession()
-	restaurants = session.query(Restaurant).all()
-	return jsonify(Restaurants = [i.serialize for i in restaurants])
+	categories = session.query(Category).all()
+	return jsonify(Categories = [i.serialize for i in categories])
 
-# Making an API Endpoint for Restaurant Menu (Get Request)
-@app.route('/restaurants/<int:restaurant_id>/menu/JSON')
-def restaurantMenuJSON(restaurant_id):
+# Making an API Endpoint for seeing items in a category (Get Request)
+@app.route('/categories/<int:category_id>/JSON')
+def categoryItemsJSON(category_id):
 	DBSession = sessionmaker(bind = engine)
 	session = DBSession()
-	restaurant = session.query(Restaurant).filter_by(id = restaurant_id).one()
-	items = session.query(MenuItem).filter_by(restaurant_id = restaurant.id)
-	return jsonify(RestaurantMenu = [i.serialize for i in items])
+	category = session.query(Category).filter_by(id = category_id).one()
+	items = session.query(CategoryItem).filter_by(category_id = category.id)
+	return jsonify(CategoryItems = [i.serialize for i in items])
 
-# Making an API Endpoint (Get Request)
-@app.route('/restaurants/<int:restaurant_id>/menu/<int:menu_id>/JSON')
-def menuItemJSON(restaurant_id, menu_id):
+# Making an API Endpoint for seeing info about a particular item (Get Request)
+@app.route('/categories/<int:category_id>/<int:item_id>/JSON')
+def categoryItemJSON(category_id, item_id):
 	DBSession = sessionmaker(bind = engine)
 	session = DBSession()
-	item = session.query(MenuItem).filter_by(id=menu_id)
-	return jsonify(MenuItem = [i.serialize for i in item])
+	item = session.query(CategoryItem).filter_by(id=category_id)
+	return jsonify(CategoryItem = [i.serialize for i in item])
 
 if __name__ == '__main__':
-	app.secret_key = 'super_secret_key' #this is for keeing sessions for showing a flash message
+	app.secret_key = 'super_secret_key' #this is for keeping sessions for showing a flash message
 	app.debug = True
 	app.run(host = '0.0.0.0', port = 5000)
 
