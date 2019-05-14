@@ -1,6 +1,6 @@
 # About
 
-Application that provides a list of items within a variety of categories as well as provide a user registration and authentication system. Registered users have the ability to post, edit and delete their own items.
+Application that provides a list of items within a variety of categories as well as provide a user registration and authentication system. Registered users have the ability to post, edit and delete items and categories.
 
 This is a RESTful web application that uses Python framework Flask, SQLite and Google OAuth authentication.
 
@@ -22,6 +22,6 @@ Once you have installed Vagrant and Virtualbox, run the Vagrantfile to configure
 
 # Running the application
 
-After you connect to the vagrant virtual machine using ssh, clone this repository to the VM. Finally, within the folder, type the following in the command line to run the application in your localhost:
+Clone this repository to the vagrant virtual machine. Finally, within the cloned folder, type the following in the command line to run the application in your localhost:
 
 `python application.py`
