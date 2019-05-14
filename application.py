@@ -3,7 +3,6 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from database_setup import Base, Category, CategoryItem, User
 
-
 # Imports for creating a visitor session
 from flask import session as login_session
 import random, string
@@ -15,10 +14,6 @@ import httplib2
 import json
 from flask import make_response
 import requests
-
-# Declaring Client ID
-CLIENT_ID = json.loads(
-  open('client_secrets.json', 'r').read())['web']['client_id']
 
 # Create a session and connect to a database
 engine = create_engine('sqlite:///catalog.db')
@@ -41,10 +36,10 @@ def showCategories():
 	session.close()
 
 	# Show different if user is logged in
-	#if 'username' not in login_session:
-	#	return render_template('publiccategories.html', categories = categories)
-	#else: 
-	return render_template('categories.html', categories = categories)
+	if 'username' not in login_session:
+		return render_template('publiccategories.html', categories = categories)
+	else: 
+		return render_template('categories.html', categories = categories)
 
 # Adding a new category
 @app.route('/categories/new', methods=['GET', 'POST'])
@@ -112,10 +107,10 @@ def showCategory(category_id):
 	session.close()
 
 	# Show different if user is logged in
-	#if 'username' not in login_session:
-	#	return render_template('publicitems.html', category = category, items = items)
-	#else: 
-	return render_template('items.html', category = category, items = items)
+	if 'username' not in login_session:
+		return render_template('publicitems.html', category = category, items = items)
+	else: 
+		return render_template('items.html', category = category, items = items)
 
 # Create new items for category
 @app.route('/categories/<int:category_id>/new', methods=['GET', 'POST'])
@@ -206,14 +201,16 @@ def categoryItemJSON(category_id, item_id):
 	session.close()
 	return jsonify(CategoryItem = [i.serialize for i in item])
 
+# Next: the code for login/logout users
+
+# Declaring Client ID
+CLIENT_ID = json.loads(
+  open('client_secrets.json', 'r').read())['web']['client_id']
 
 # Create anti-forgery state token
 # #Store it in the session for later validation
 @app.route('/login')
 def showLogin():
-    DBSession = sessionmaker(bind=engine)
-    session = DBSession()
-
     state = ''.join(random.choice(string.ascii_uppercase + string.digits)for x in range(32))
 
     login_session['state'] = state
@@ -228,6 +225,7 @@ def createUser(login_session):
     session.add(newUser)
     session.commit
     user = session.query(User).filter_by(email = login_session['email']).one()
+    session.close()
     return user.id
 
 def getUserInfo(user_id):
@@ -235,6 +233,7 @@ def getUserInfo(user_id):
     session = DBSession()
 
     user = session.query(User).filter_by(id = user_id).one()
+    session.close()
     return user
 
 def getUserId(email):
@@ -243,16 +242,14 @@ def getUserId(email):
         session = DBSession()
 
         user = session.query(User).filter_by(email = email).one()
+        session.close()
         return user.id
     except:
         return None
 
-
+# Endpoint for login using Google
 @app.route('/gconnect', methods = ['POST'])
 def gconnect():
-    DBSession = sessionmaker(bind=engine)
-    session = DBSession()
-
     # Validate state token
     if request.args.get('state') != login_session['state']:
         response = make_response(json.dumps('Invalid state parameter.'), 401)
@@ -342,11 +339,9 @@ def gconnect():
     print "done!"
     return output
 
-
 # Disconnect - Revoke a current user's token and reset their login_session.
 @app.route("/gdisconnect")
 def gdisconnect():
-
     # Only disconnect a connected user.
     access_token = login_session.get('access_token')
     if access_token is None:
@@ -384,7 +379,6 @@ def disconnect():
     else:
         flash("You were not logged in to begin with!")
         redirect(url_for('showCategories'))
-
 
 
 if __name__ == '__main__':
