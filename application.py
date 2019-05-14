@@ -152,8 +152,7 @@ def editCategoryItem(category_id, item_id):
         return redirect('/login')
     DBSession = sessionmaker(bind=engine)
     session = DBSession()
-    editedItemCategory = session.query(Category).filter_by
-    (id=category_id).one()
+    editItemCategory = session.query(Category).filter_by(id=category_id).one()
     editedItem = session.query(CategoryItem).filter_by(id=item_id).one()
     if request.method == 'POST':
         if request.form['name']:
@@ -169,7 +168,7 @@ def editCategoryItem(category_id, item_id):
         session.close()
         return render_template(
             'editcategoryitem.html', category_id=category_id,
-            item_id=item_id, item=editedItem, category=editedItemCategory)
+            item_id=item_id, item=editedItem, category=editItemCategory)
 
 # Delete a category item
 @app.route('/categories/<int:category_id>/<int:item_id>/delete',
@@ -179,8 +178,7 @@ def deleteCategoryItem(category_id, item_id):
         return redirect('/login')
     DBSession = sessionmaker(bind=engine)
     session = DBSession()
-    deletedItemCategory = session.query(Category).filter_by
-    (id=category_id).one()
+    delItemCategory = session.query(Category).filter_by(id=category_id).one()
     deletedItem = session.query(CategoryItem).filter_by(id=item_id).one()
     if request.method == 'POST':
         session.delete(deletedItem)
@@ -192,7 +190,7 @@ def deleteCategoryItem(category_id, item_id):
         session.close()
         return render_template(
             'deletecategoryitem.html', item=deletedItem,
-            category=deletedItemCategory)
+            category=delItemCategory)
 
 # Start of JSON endpoints
 # Making an API Endpoint for getting all the categories (Get Request)
