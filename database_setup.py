@@ -6,6 +6,7 @@ from sqlalchemy import create_engine
 
 Base = declarative_base()
 
+
 class User(Base):
     __tablename__ = 'user'
 
@@ -17,38 +18,40 @@ class User(Base):
 
 class Category(Base):
 
-	__tablename__ = 'category'
+    __tablename__ = 'category'
 
-	name = Column(String(80), nullable = False)
-	id = Column(Integer, primary_key = True)
+    name = Column(String(80), nullable=False)
+    id = Column(Integer, primary_key=True)
 
-	@property
-	def serialize(self):
-		# Returns object data in easily serializeable formate
-		return {
-			'name' : self.name,
-			'id' : self.id,
-		}
-		
+    @property
+    def serialize(self):
+        # Returns object data in easily serializeable formate
+        return {
+            'name': self.name,
+            'id': self.id,
+        }
+
+
 class CategoryItem(Base):
 
-	__tablename__ = 'category_item'
+    __tablename__ = 'category_item'
 
-	name = Column(String(80), nullable = False)
-	id = Column(Integer, primary_key = True)
-	description = Column(String(250))
-	category_id = Column(Integer, ForeignKey('category.id'))
-	category = relationship(Category)
+    name = Column(String(80), nullable=False)
+    id = Column(Integer, primary_key=True)
+    description = Column(String(250))
+    category_id = Column(Integer, ForeignKey('category.id'))
+    category = relationship(Category)
 
-	@property
-	def serialize(self):
-		# Returns object data in easily serializeable formate
-		return {
-			'name' : self.name,
-			'description' : self.description,
-			'id' : self.id,
-		}
-	
+    @property
+    def serialize(self):
+        # Returns object data in easily serializeable formate
+        return {
+            'name': self.name,
+            'description': self.description,
+            'id': self.id,
+        }
+
+
 engine = create_engine('sqlite:///catalog.db')
 
 Base.metadata.create_all(engine)

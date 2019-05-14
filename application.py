@@ -1,13 +1,11 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import jsonify
+from flask import session as login_session
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from database_setup import Base, Category, CategoryItem, User
-
-# Imports for creating a visitor session
-from flask import session as login_session
-import random, string
-
-# Imports for the GConnect
+import random
+import string
 from oauth2client.client import flow_from_clientsecrets
 from oauth2client.client import FlowExchangeError
 import httplib2
@@ -30,75 +28,77 @@ app = Flask(__name__)
 @app.route('/catalog')
 @app.route('/catalog/')
 def showCategories():
-	DBSession = sessionmaker(bind = engine)
-	session = DBSession()
-	categories = session.query(Category).all()
-	session.close()
+    DBSession = sessionmaker(bind=engine)
+    session = DBSession()
+    categories = session.query(Category).all()
+    session.close()
 
-	# Show different if user is logged in
-	if 'username' not in login_session:
-		return render_template('publiccategories.html', categories = categories)
-	else: 
-		return render_template('categories.html', categories = categories)
+    # Show different if user is logged in
+    if 'username' not in login_session:
+        return render_template('publiccategories.html', categories=categories)
+    else:
+        return render_template('categories.html', categories=categories)
 
 # Adding a new category
 @app.route('/categories/new', methods=['GET', 'POST'])
 def newCategory():
-	if 'username' not in login_session:
-		return redirect('/login')
-	DBSession = sessionmaker(bind = engine)
-	session = DBSession()
-	# looks for a post request
-	if request.method == 'POST':
-		# extracts the name field from my form using request.form
-		newCategory = Category(name = request.form['name'])
-		session.add(newCategory)
-		session.commit()
-		session.close()
-		flash("New category created!")
-		return redirect(url_for('showCategories'))
-	else:
-		session.close()
-		return render_template('newcategory.html')
+    if 'username' not in login_session:
+        return redirect('/login')
+    DBSession = sessionmaker(bind=engine)
+    session = DBSession()
+    # looks for a post request
+    if request.method == 'POST':
+        # extracts the name field from my form using request.form
+        newCategory = Category(name=request.form['name'])
+        session.add(newCategory)
+        session.commit()
+        session.close()
+        flash("New category created!")
+        return redirect(url_for('showCategories'))
+    else:
+        session.close()
+        return render_template('newcategory.html')
 
 # Editing an existing category
 @app.route('/categories/<int:category_id>/edit', methods=['GET', 'POST'])
 def editCategory(category_id):
-	if 'username' not in login_session:
-		return redirect('/login')
-	DBSession = sessionmaker(bind = engine)
-	session = DBSession()
-	editedCategory = session.query(Category).filter_by(id=category_id).one()
-	if request.method == 'POST':
-		if request.form['name']:
-			editedCategory.name = request.form['name']
-		session.add(editedCategory)
-		session.commit()
-		session.close()
-		flash("Category has been edited!")
-		return redirect(url_for('showCategories'))
-	else:
-		session.close()
-		return render_template('editcategory.html', category_id = category_id, category = editedCategory)
+    if 'username' not in login_session:
+        return redirect('/login')
+    DBSession = sessionmaker(bind=engine)
+    session = DBSession()
+    editedCategory = session.query(Category).filter_by(id=category_id).one()
+    if request.method == 'POST':
+        if request.form['name']:
+            editedCategory.name = request.form['name']
+        session.add(editedCategory)
+        session.commit()
+        session.close()
+        flash("Category has been edited!")
+        return redirect(url_for('showCategories'))
+    else:
+        session.close()
+        return render_template('editcategory.html',
+                               category_id=category_id,
+                               category=editedCategory)
 
 # Deleting an existing category
 @app.route('/categories/<int:category_id>/delete', methods=['GET', 'POST'])
 def deleteCategory(category_id):
-	if 'username' not in login_session:
-		return redirect('/login')
-	DBSession = sessionmaker(bind = engine)
-	session = DBSession()
-	deletedCategory = session.query(Category).filter_by(id = category_id).one()
-	if request.method == 'POST':
-		session.delete(deletedCategory)
-		session.commit()
-		session.close()
-		flash("Category has been deleted!")
-		return redirect(url_for('showCategories'))
-	else:
-		session.close()
-		return render_template(
-			'deletecategory.html', category = deletedCategory)
+    if 'username' not in login_session:
+        return redirect('/login')
+    DBSession = sessionmaker(bind=engine)
+    session = DBSession()
+    deletedCategory = session.query(Category).filter_by(id=category_id).one()
+    if request.method == 'POST':
+        session.delete(deletedCategory)
+        session.commit()
+        session.close()
+        flash("Category has been deleted!")
+        return redirect(url_for('showCategories'))
+    else:
+        session.close()
+        return render_template(
+            'deletecategory.html', category=deletedCategory)
 
 # Items
 # Shows items within a category
@@ -106,161 +106,178 @@ def deleteCategory(category_id):
 @app.route('/categories/<int:category_id>/')
 @app.route('/categories/<int:category_id>/all')
 def showCategory(category_id):
-	DBSession = sessionmaker(bind = engine)
-	session = DBSession()
-	category = session.query(Category).filter_by(id = category_id).one()
-	items = session.query(CategoryItem).filter_by(category_id = category.id)
-	session.close()
+    DBSession = sessionmaker(bind=engine)
+    session = DBSession()
+    category = session.query(Category).filter_by(id=category_id).one()
+    items = session.query(CategoryItem).filter_by(category_id=category.id)
+    session.close()
 
-	# Show different if user is logged in
-	if 'username' not in login_session:
-		return render_template('publicitems.html', category = category, items = items)
-	else: 
-		return render_template('items.html', category = category, items = items)
+    # Show different if user is logged in
+    if 'username' not in login_session:
+        return render_template('publicitems.html',
+                               category=category, items=items)
+    else:
+        return render_template('items.html', category=category, items=items)
 
 # Create new items for category
 @app.route('/categories/<int:category_id>/new', methods=['GET', 'POST'])
 def newCategoryItem(category_id):
-	if 'username' not in login_session:
-		return redirect('/login')
-	DBSession = sessionmaker(bind = engine)
-	session = DBSession()
-	# looks for a post request
-	newItemCategory = session.query(Category).filter_by(id = category_id).one()
-	if request.method == 'POST':
-		# extracts the name field from my form using request.form
-		newItem = CategoryItem(name = request.form['name'], description = request.form['description'], category_id = category_id)
-		session.add(newItem)
-		session.commit()
-		session.close()
-		flash("New category item created!")
-		return redirect(url_for('showCategory', category_id = category_id))
-	else:
-		session.close()
-		return render_template('newcategoryitem.html', category_id = category_id, category = newItemCategory)
+    if 'username' not in login_session:
+        return redirect('/login')
+    DBSession = sessionmaker(bind=engine)
+    session = DBSession()
+    # looks for a post request
+    newItemCategory = session.query(Category).filter_by(id=category_id).one()
+    if request.method == 'POST':
+        # extracts the name field from my form using request.form
+        newItem = CategoryItem(name=request.form['name'],
+                               description=request.form['description'],
+                               category_id=category_id)
+        session.add(newItem)
+        session.commit()
+        session.close()
+        flash("New category item created!")
+        return redirect(url_for('showCategory', category_id=category_id))
+    else:
+        session.close()
+        return render_template('newcategoryitem.html',
+                               category_id=category_id,
+                               category=newItemCategory)
 
 # Edit items in category
 @app.route('/categories/<int:category_id>/<int:item_id>/edit',
-			methods=['GET', 'POST'])
+           methods=['GET', 'POST'])
 def editCategoryItem(category_id, item_id):
-	if 'username' not in login_session:
-		return redirect('/login')
-	DBSession = sessionmaker(bind = engine)
-	session = DBSession()
-	editedItemCategory = session.query(Category).filter_by(id = category_id).one()
-	editedItem = session.query(CategoryItem).filter_by(id = item_id).one()
-	if request.method == 'POST':
-		if request.form['name']:
-			editedItem.name = request.form['name']
-		if request.form['description']:
-			editedItem.description = request.form['description']
-		session.add(editedItem)
-		session.commit()
-		session.close()
-		flash("Category item has been edited!")
-		return redirect(url_for('showCategory', category_id = category_id))
-	else:
-		session.close()
-		return render_template(
-			'editcategoryitem.html', category_id = category_id, item_id = item_id, item = editedItem, category = editedItemCategory)
+    if 'username' not in login_session:
+        return redirect('/login')
+    DBSession = sessionmaker(bind=engine)
+    session = DBSession()
+    editedItemCategory = session.query(Category).filter_by
+    (id=category_id).one()
+    editedItem = session.query(CategoryItem).filter_by(id=item_id).one()
+    if request.method == 'POST':
+        if request.form['name']:
+            editedItem.name = request.form['name']
+        if request.form['description']:
+            editedItem.description = request.form['description']
+        session.add(editedItem)
+        session.commit()
+        session.close()
+        flash("Category item has been edited!")
+        return redirect(url_for('showCategory', category_id=category_id))
+    else:
+        session.close()
+        return render_template(
+            'editcategoryitem.html', category_id=category_id,
+            item_id=item_id, item=editedItem, category=editedItemCategory)
 
 # Delete a category item
-@app.route('/categories/<int:category_id>/<int:item_id>/delete', methods=['GET', 'POST'])
+@app.route('/categories/<int:category_id>/<int:item_id>/delete',
+           methods=['GET', 'POST'])
 def deleteCategoryItem(category_id, item_id):
-	if 'username' not in login_session:
-		return redirect('/login')
-	DBSession = sessionmaker(bind = engine)
-	session = DBSession()
-	deletedItemCategory = session.query(Category).filter_by(id = category_id).one()
-	deletedItem = session.query(CategoryItem).filter_by(id =  item_id).one()
-	if request.method == 'POST':
-		session.delete(deletedItem)
-		session.commit()
-		flash("Category item has been deleted!")
-		session.close()
-		return redirect(url_for('showCategory', category_id = category_id))
-	else:
-		session.close()
-		return render_template(
-			'deletecategoryitem.html', item = deletedItem, category = deletedItemCategory)
+    if 'username' not in login_session:
+        return redirect('/login')
+    DBSession = sessionmaker(bind=engine)
+    session = DBSession()
+    deletedItemCategory = session.query(Category).filter_by
+    (id=category_id).one()
+    deletedItem = session.query(CategoryItem).filter_by(id=item_id).one()
+    if request.method == 'POST':
+        session.delete(deletedItem)
+        session.commit()
+        flash("Category item has been deleted!")
+        session.close()
+        return redirect(url_for('showCategory', category_id=category_id))
+    else:
+        session.close()
+        return render_template(
+            'deletecategoryitem.html', item=deletedItem,
+            category=deletedItemCategory)
 
 # Start of JSON endpoints
 # Making an API Endpoint for getting all the categories (Get Request)
 @app.route('/categories/JSON')
 def allCategoriesJSON():
-	DBSession = sessionmaker(bind = engine)
-	session = DBSession()
-	categories = session.query(Category).all()
-	session.close()
-	return jsonify(Categories = [i.serialize for i in categories])
+    DBSession = sessionmaker(bind=engine)
+    session = DBSession()
+    categories = session.query(Category).all()
+    session.close()
+    return jsonify(Categories=[i.serialize for i in categories])
 
 # Making an API Endpoint for seeing items in a category (Get Request)
 @app.route('/categories/<int:category_id>/JSON')
 def categoryItemsJSON(category_id):
-	DBSession = sessionmaker(bind = engine)
-	session = DBSession()
-	category = session.query(Category).filter_by(id = category_id).one()
-	items = session.query(CategoryItem).filter_by(category_id = category.id)
-	session.close()
-	return jsonify(CategoryItems = [i.serialize for i in items])
+    DBSession = sessionmaker(bind=engine)
+    session = DBSession()
+    category = session.query(Category).filter_by(id=category_id).one()
+    items = session.query(CategoryItem).filter_by(category_id=category.id)
+    session.close()
+    return jsonify(CategoryItems=[i.serialize for i in items])
 
 # Making an API Endpoint for seeing info about a particular item (Get Request)
 @app.route('/categories/<int:category_id>/<int:item_id>/JSON')
 def categoryItemJSON(category_id, item_id):
-	DBSession = sessionmaker(bind = engine)
-	session = DBSession()
-	item = session.query(CategoryItem).filter_by(id=category_id)
-	session.close()
-	return jsonify(CategoryItem = [i.serialize for i in item])
+    DBSession = sessionmaker(bind=engine)
+    session = DBSession()
+    item = session.query(CategoryItem).filter_by(id=category_id)
+    session.close()
+    return jsonify(CategoryItem=[i.serialize for i in item])
+
 
 # Next: the code for login/logout users
 
 # Declaring Client ID
 CLIENT_ID = json.loads(
-  open('client_secrets.json', 'r').read())['web']['client_id']
+    open('client_secrets.json', 'r').read())['web']['client_id']
 
 # Create anti-forgery state token
 # #Store it in the session for later validation
 @app.route('/login')
 def showLogin():
-    state = ''.join(random.choice(string.ascii_uppercase + string.digits)for x in range(32))
+    state = ''.join(random.choice(string.ascii_uppercase + string.digits)
+                    for x in range(32))
 
     login_session['state'] = state
     # return "The current session state is %s" % login_session['state']
     return render_template('login.html', STATE=state)
 
+
 def createUser(login_session):
     DBSession = sessionmaker(bind=engine)
     session = DBSession()
 
-    newUser = User(name = login_session['username'], email = login_session['email'], picture = login_session['picture'])
+    newUser = User(name=login_session['username'], email=login_session
+                   ['email'], picture=login_session['picture'])
     session.add(newUser)
     session.commit
-    user = session.query(User).filter_by(email = login_session['email']).one()
+    user = session.query(User).filter_by(email=login_session['email']).one()
     session.close()
     return user.id
+
 
 def getUserInfo(user_id):
     DBSession = sessionmaker(bind=engine)
     session = DBSession()
 
-    user = session.query(User).filter_by(id = user_id).one()
+    user = session.query(User).filter_by(id=user_id).one()
     session.close()
     return user
+
 
 def getUserId(email):
     try:
         DBSession = sessionmaker(bind=engine)
         session = DBSession()
 
-        user = session.query(User).filter_by(email = email).one()
+        user = session.query(User).filter_by(email=email).one()
         session.close()
         return user.id
-    except:
+    except ImportError:
         return None
 
+
 # Endpoint for login using Google
-@app.route('/gconnect', methods = ['POST'])
+@app.route('/gconnect', methods=['POST'])
 def gconnect():
     # Validate state token
     if request.args.get('state') != login_session['state']:
@@ -312,8 +329,8 @@ def gconnect():
     stored_access_token = login_session.get('access_token')
     stored_gplus_id = login_session.get('gplus_id')
     if stored_access_token is not None and gplus_id == stored_gplus_id:
-        response = make_response(json.dumps('Current user is already connected.'),
-                                 200)
+        response = make_response(json.dumps
+                                 ('Current user is already connected.'), 200)
         response.headers['Content-Type'] = 'application/json'
         return response
 
@@ -345,8 +362,6 @@ def gconnect():
     output += login_session['username']
     output += '!</h1>'
     output += '<img src="'
-    output += login_session['picture']
-    output += ' " style = "width: 300px; height: 300px;border-radius: 150px;-webkit-border-radius: 150px;-moz-border-radius: 150px;"> '
     flash("you are now logged in as %s" % login_session['username'])
     print "done!"
     return output
@@ -369,9 +384,12 @@ def gdisconnect():
         response.headers['Content-Type'] = 'application/json'
         return response
     else:
-        response = make_response(json.dumps('Failed to revoke token for given user.', 400))
+        response = make_response(json.dumps
+                                 ('Failed to revoke token for given user.',
+                                  400))
         response.headers['Content-Type'] = 'application/json'
         return response
+
 
 @app.route('/disconnect')
 def disconnect():
@@ -394,7 +412,7 @@ def disconnect():
 
 
 if __name__ == '__main__':
-	app.secret_key = 'super_secret_key' #this is for keeping sessions for showing a flash message
-	app.debug = True
-	app.run(host = '0.0.0.0', port = 5000)
-
+    # This is for keeping sessions for showing a flash message
+    app.secret_key = 'super_secret_key'
+    app.debug = True
+    app.run(host='0.0.0.0', port=5000)
