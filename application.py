@@ -44,6 +44,8 @@ def showCategories():
 # Adding a new category
 @app.route('/categories/new', methods=['GET', 'POST'])
 def newCategory():
+	if 'username' not in login_session:
+		return redirect('/login')
 	DBSession = sessionmaker(bind = engine)
 	session = DBSession()
 	# looks for a post request
@@ -62,6 +64,8 @@ def newCategory():
 # Editing an existing category
 @app.route('/categories/<int:category_id>/edit', methods=['GET', 'POST'])
 def editCategory(category_id):
+	if 'username' not in login_session:
+		return redirect('/login')
 	DBSession = sessionmaker(bind = engine)
 	session = DBSession()
 	editedCategory = session.query(Category).filter_by(id=category_id).one()
@@ -80,6 +84,8 @@ def editCategory(category_id):
 # Deleting an existing category
 @app.route('/categories/<int:category_id>/delete', methods=['GET', 'POST'])
 def deleteCategory(category_id):
+	if 'username' not in login_session:
+		return redirect('/login')
 	DBSession = sessionmaker(bind = engine)
 	session = DBSession()
 	deletedCategory = session.query(Category).filter_by(id = category_id).one()
@@ -115,6 +121,8 @@ def showCategory(category_id):
 # Create new items for category
 @app.route('/categories/<int:category_id>/new', methods=['GET', 'POST'])
 def newCategoryItem(category_id):
+	if 'username' not in login_session:
+		return redirect('/login')
 	DBSession = sessionmaker(bind = engine)
 	session = DBSession()
 	# looks for a post request
@@ -135,6 +143,8 @@ def newCategoryItem(category_id):
 @app.route('/categories/<int:category_id>/<int:item_id>/edit',
 			methods=['GET', 'POST'])
 def editCategoryItem(category_id, item_id):
+	if 'username' not in login_session:
+		return redirect('/login')
 	DBSession = sessionmaker(bind = engine)
 	session = DBSession()
 	editedItemCategory = session.query(Category).filter_by(id = category_id).one()
@@ -157,6 +167,8 @@ def editCategoryItem(category_id, item_id):
 # Delete a category item
 @app.route('/categories/<int:category_id>/<int:item_id>/delete', methods=['GET', 'POST'])
 def deleteCategoryItem(category_id, item_id):
+	if 'username' not in login_session:
+		return redirect('/login')
 	DBSession = sessionmaker(bind = engine)
 	session = DBSession()
 	deletedItemCategory = session.query(Category).filter_by(id = category_id).one()
