@@ -1,6 +1,11 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
-from flask import jsonify
-from flask import session as login_session
+from flask import (Flask, 
+                   render_template, 
+                   request, 
+                   redirect, 
+                   url_for, 
+                   flash,
+                   jsonify,
+                   session as login_session)
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from database_setup import Base, Category, CategoryItem, User
@@ -14,22 +19,24 @@ from flask import make_response
 import requests
 
 # Create a session and connect to a database
-engine = create_engine('sqlite:///catalog.db')
+# Using check_same_thread to avoid the exception thrown because using the same DBSession
+engine = create_engine('sqlite:///catalog.db', connect_args={'check_same_thread':False})
 Base.metadata.bind = engine
 
 # Initiate flask app instance
 app = Flask(__name__)
 
-# Start of HTML endpoints
+# Start the DB session
+DBSession = sessionmaker(bind=engine)
+session = DBSession()
 
+# Start of HTML endpoints
 # Categories
 # Definining catalog home that shows all categories
 @app.route('/')
 @app.route('/catalog')
 @app.route('/catalog/')
 def showCategories():
-    DBSession = sessionmaker(bind=engine)
-    session = DBSession()
     categories = session.query(Category).all()
     session.close()
 
@@ -64,8 +71,7 @@ def newCategory():
 def editCategory(category_id):
     if 'username' not in login_session:
         return redirect('/login')
-    DBSession = sessionmaker(bind=engine)
-    session = DBSession()
+
     editedCategory = session.query(Category).filter_by(id=category_id).one()
     if request.method == 'POST':
         if request.form['name']:
