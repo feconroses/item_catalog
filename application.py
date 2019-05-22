@@ -5,6 +5,7 @@ from flask import (Flask,
                    url_for, 
                    flash,
                    jsonify,
+                   make_response,
                    session as login_session)
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -15,7 +16,7 @@ from oauth2client.client import flow_from_clientsecrets
 from oauth2client.client import FlowExchangeError
 import httplib2
 import json
-from flask import make_response
+from functools import wraps
 import requests
 
 # Create a session and connect to a database
@@ -29,6 +30,17 @@ app = Flask(__name__)
 # Start the DB session
 DBSession = sessionmaker(bind=engine)
 session = DBSession()
+
+# function decorator to avoid unautheticated users
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'username' in login_session:
+            return f(*args, **kwargs)
+        else:
+            flash("You are not allowed to access there")
+            return redirect('/login')
+    return decorated_function
 
 # Start of HTML endpoints
 # Categories
@@ -48,11 +60,8 @@ def showCategories():
 
 # Adding a new category
 @app.route('/categories/new', methods=['GET', 'POST'])
+@login_required
 def newCategory():
-    if 'username' not in login_session:
-        return redirect('/login')
-    DBSession = sessionmaker(bind=engine)
-    session = DBSession()
     # looks for a post request
     if request.method == 'POST':
         # extracts the name field from my form using request.form
@@ -68,10 +77,8 @@ def newCategory():
 
 # Editing an existing category
 @app.route('/categories/<int:category_id>/edit', methods=['GET', 'POST'])
+@login_required
 def editCategory(category_id):
-    if 'username' not in login_session:
-        return redirect('/login')
-
     editedCategory = session.query(Category).filter_by(id=category_id).one()
     if request.method == 'POST':
         if request.form['name']:
@@ -89,11 +96,8 @@ def editCategory(category_id):
 
 # Deleting an existing category
 @app.route('/categories/<int:category_id>/delete', methods=['GET', 'POST'])
+@login_required
 def deleteCategory(category_id):
-    if 'username' not in login_session:
-        return redirect('/login')
-    DBSession = sessionmaker(bind=engine)
-    session = DBSession()
     deletedCategory = session.query(Category).filter_by(id=category_id).one()
     if request.method == 'POST':
         session.delete(deletedCategory)
@@ -112,8 +116,6 @@ def deleteCategory(category_id):
 @app.route('/categories/<int:category_id>/')
 @app.route('/categories/<int:category_id>/all')
 def showCategory(category_id):
-    DBSession = sessionmaker(bind=engine)
-    session = DBSession()
     category = session.query(Category).filter_by(id=category_id).one()
     items = session.query(CategoryItem).filter_by(category_id=category.id)
     session.close()
@@ -127,11 +129,8 @@ def showCategory(category_id):
 
 # Create new items for category
 @app.route('/categories/<int:category_id>/new', methods=['GET', 'POST'])
+@login_required
 def newCategoryItem(category_id):
-    if 'username' not in login_session:
-        return redirect('/login')
-    DBSession = sessionmaker(bind=engine)
-    session = DBSession()
     # looks for a post request
     newItemCategory = session.query(Category).filter_by(id=category_id).one()
     if request.method == 'POST':
@@ -153,11 +152,8 @@ def newCategoryItem(category_id):
 # Edit items in category
 @app.route('/categories/<int:category_id>/<int:item_id>/edit',
            methods=['GET', 'POST'])
+@login_required
 def editCategoryItem(category_id, item_id):
-    if 'username' not in login_session:
-        return redirect('/login')
-    DBSession = sessionmaker(bind=engine)
-    session = DBSession()
     editItemCategory = session.query(Category).filter_by(id=category_id).one()
     editedItem = session.query(CategoryItem).filter_by(id=item_id).one()
     if request.method == 'POST':
@@ -179,11 +175,8 @@ def editCategoryItem(category_id, item_id):
 # Delete a category item
 @app.route('/categories/<int:category_id>/<int:item_id>/delete',
            methods=['GET', 'POST'])
+@login_required
 def deleteCategoryItem(category_id, item_id):
-    if 'username' not in login_session:
-        return redirect('/login')
-    DBSession = sessionmaker(bind=engine)
-    session = DBSession()
     delItemCategory = session.query(Category).filter_by(id=category_id).one()
     deletedItem = session.query(CategoryItem).filter_by(id=item_id).one()
     if request.method == 'POST':
@@ -202,8 +195,6 @@ def deleteCategoryItem(category_id, item_id):
 # Making an API Endpoint for getting all the categories (Get Request)
 @app.route('/categories/JSON')
 def allCategoriesJSON():
-    DBSession = sessionmaker(bind=engine)
-    session = DBSession()
     categories = session.query(Category).all()
     session.close()
     return jsonify(Categories=[i.serialize for i in categories])
@@ -211,8 +202,6 @@ def allCategoriesJSON():
 # Making an API Endpoint for seeing items in a category (Get Request)
 @app.route('/categories/<int:category_id>/JSON')
 def categoryItemsJSON(category_id):
-    DBSession = sessionmaker(bind=engine)
-    session = DBSession()
     category = session.query(Category).filter_by(id=category_id).one()
     items = session.query(CategoryItem).filter_by(category_id=category.id)
     session.close()
@@ -221,8 +210,6 @@ def categoryItemsJSON(category_id):
 # Making an API Endpoint for seeing info about a particular item (Get Request)
 @app.route('/categories/<int:category_id>/<int:item_id>/JSON')
 def categoryItemJSON(category_id, item_id):
-    DBSession = sessionmaker(bind=engine)
-    session = DBSession()
     item = session.query(CategoryItem).filter_by(id=category_id)
     session.close()
     return jsonify(CategoryItem=[i.serialize for i in item])
@@ -247,9 +234,6 @@ def showLogin():
 
 
 def createUser(login_session):
-    DBSession = sessionmaker(bind=engine)
-    session = DBSession()
-
     newUser = User(name=login_session['username'], email=login_session
                    ['email'], picture=login_session['picture'])
     session.add(newUser)
@@ -260,9 +244,6 @@ def createUser(login_session):
 
 
 def getUserInfo(user_id):
-    DBSession = sessionmaker(bind=engine)
-    session = DBSession()
-
     user = session.query(User).filter_by(id=user_id).one()
     session.close()
     return user
@@ -270,9 +251,6 @@ def getUserInfo(user_id):
 
 def getUserId(email):
     try:
-        DBSession = sessionmaker(bind=engine)
-        session = DBSession()
-
         user = session.query(User).filter_by(email=email).one()
         session.close()
         return user.id
