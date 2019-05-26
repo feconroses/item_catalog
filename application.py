@@ -50,7 +50,6 @@ def login_required(f):
 @app.route('/catalog/')
 def showCategories():
     categories = session.query(Category).all()
-    session.close()
 
     # Show different if user is logged in
     if 'username' not in login_session:
@@ -64,32 +63,31 @@ def showCategories():
 def newCategory():
     # looks for a post request
     if request.method == 'POST':
+        # checks the creator information
+        user_id = getUserId(login_session['email'] )
+
         # extracts the name field from my form using request.form
-        newCategory = Category(name=request.form['name'])
+        newCategory = Category(name=request.form['name'], user_id=user_id)
         session.add(newCategory)
         session.commit()
-        session.close()
         flash("New category created!")
         return redirect(url_for('showCategories'))
     else:
-        session.close()
         return render_template('newcategory.html')
 
 # Editing an existing category
 @app.route('/categories/<int:category_id>/edit', methods=['GET', 'POST'])
 @login_required
 def editCategory(category_id):
-    editedCategory = session.query(Category).filter_by(id=category_id).one()
+    editedCategory = session.query(Category).filter_by(id=category_id).one_or_none()
     if request.method == 'POST':
         if request.form['name']:
             editedCategory.name = request.form['name']
         session.add(editedCategory)
         session.commit()
-        session.close()
         flash("Category has been edited!")
         return redirect(url_for('showCategories'))
     else:
-        session.close()
         return render_template('editcategory.html',
                                category_id=category_id,
                                category=editedCategory)
@@ -98,15 +96,13 @@ def editCategory(category_id):
 @app.route('/categories/<int:category_id>/delete', methods=['GET', 'POST'])
 @login_required
 def deleteCategory(category_id):
-    deletedCategory = session.query(Category).filter_by(id=category_id).one()
+    deletedCategory = session.query(Category).filter_by(id=category_id).one_or_none()
     if request.method == 'POST':
         session.delete(deletedCategory)
         session.commit()
-        session.close()
         flash("Category has been deleted!")
         return redirect(url_for('showCategories'))
     else:
-        session.close()
         return render_template(
             'deletecategory.html', category=deletedCategory)
 
@@ -116,9 +112,8 @@ def deleteCategory(category_id):
 @app.route('/categories/<int:category_id>/')
 @app.route('/categories/<int:category_id>/all')
 def showCategory(category_id):
-    category = session.query(Category).filter_by(id=category_id).one()
+    category = session.query(Category).filter_by(id=category_id).one_or_none()
     items = session.query(CategoryItem).filter_by(category_id=category.id)
-    session.close()
 
     # Show different if user is logged in
     if 'username' not in login_session:
@@ -132,19 +127,22 @@ def showCategory(category_id):
 @login_required
 def newCategoryItem(category_id):
     # looks for a post request
-    newItemCategory = session.query(Category).filter_by(id=category_id).one()
+    newItemCategory = session.query(Category).filter_by(id=category_id).one_or_none()
     if request.method == 'POST':
+        
+        # checks the creator information
+        user_id = getUserId(login_session['email'] )
+
         # extracts the name field from my form using request.form
         newItem = CategoryItem(name=request.form['name'],
                                description=request.form['description'],
-                               category_id=category_id)
+                               category_id=category_id,
+                               user_id=user_id)
         session.add(newItem)
         session.commit()
-        session.close()
         flash("New category item created!")
         return redirect(url_for('showCategory', category_id=category_id))
     else:
-        session.close()
         return render_template('newcategoryitem.html',
                                category_id=category_id,
                                category=newItemCategory)
@@ -154,8 +152,8 @@ def newCategoryItem(category_id):
            methods=['GET', 'POST'])
 @login_required
 def editCategoryItem(category_id, item_id):
-    editItemCategory = session.query(Category).filter_by(id=category_id).one()
-    editedItem = session.query(CategoryItem).filter_by(id=item_id).one()
+    editItemCategory = session.query(Category).filter_by(id=category_id).one_or_none()
+    editedItem = session.query(CategoryItem).filter_by(id=item_id).one_or_none()
     if request.method == 'POST':
         if request.form['name']:
             editedItem.name = request.form['name']
@@ -163,11 +161,9 @@ def editCategoryItem(category_id, item_id):
             editedItem.description = request.form['description']
         session.add(editedItem)
         session.commit()
-        session.close()
         flash("Category item has been edited!")
         return redirect(url_for('showCategory', category_id=category_id))
     else:
-        session.close()
         return render_template(
             'editcategoryitem.html', category_id=category_id,
             item_id=item_id, item=editedItem, category=editItemCategory)
@@ -183,10 +179,8 @@ def deleteCategoryItem(category_id, item_id):
         session.delete(deletedItem)
         session.commit()
         flash("Category item has been deleted!")
-        session.close()
         return redirect(url_for('showCategory', category_id=category_id))
     else:
-        session.close()
         return render_template(
             'deletecategoryitem.html', item=deletedItem,
             category=delItemCategory)
@@ -196,22 +190,19 @@ def deleteCategoryItem(category_id, item_id):
 @app.route('/categories/JSON')
 def allCategoriesJSON():
     categories = session.query(Category).all()
-    session.close()
     return jsonify(Categories=[i.serialize for i in categories])
 
 # Making an API Endpoint for seeing items in a category (Get Request)
 @app.route('/categories/<int:category_id>/JSON')
 def categoryItemsJSON(category_id):
-    category = session.query(Category).filter_by(id=category_id).one()
+    category = session.query(Category).filter_by(id=category_id).one_or_none()
     items = session.query(CategoryItem).filter_by(category_id=category.id)
-    session.close()
     return jsonify(CategoryItems=[i.serialize for i in items])
 
 # Making an API Endpoint for seeing info about a particular item (Get Request)
 @app.route('/categories/<int:category_id>/<int:item_id>/JSON')
 def categoryItemJSON(category_id, item_id):
     item = session.query(CategoryItem).filter_by(id=category_id)
-    session.close()
     return jsonify(CategoryItem=[i.serialize for i in item])
 
 
@@ -234,29 +225,29 @@ def showLogin():
 
 
 def createUser(login_session):
-    newUser = User(name=login_session['username'], email=login_session
-                   ['email'], picture=login_session['picture'])
+    newUser = User(name=login_session['username'], 
+                   email=login_session['email'], 
+                   picture=login_session['picture'])
     session.add(newUser)
     session.commit
-    user = session.query(User).filter_by(email=login_session['email']).one()
-    session.close()
+    user = session.query(User).filter_by(email=login_session['email']).one_or_none() 
     return user.id
 
 
 def getUserInfo(user_id):
-    user = session.query(User).filter_by(id=user_id).one()
-    session.close()
+    user = session.query(User).filter_by(id=user_id).one_or_none() 
     return user
 
 
 def getUserId(email):
     try:
-        user = session.query(User).filter_by(email=email).one()
-        session.close()
-        return user.id
+        user = session.query(User).filter_by(email=email).one_or_none() 
+        if user:
+            return user.id
+        else:
+            return None
     except ImportError:
         return None
-
 
 # Endpoint for login using Google
 @app.route('/gconnect', methods=['POST'])
@@ -327,9 +318,9 @@ def gconnect():
 
     data = answer.json()
 
-    login_session['username'] = data['name']
-    login_session['picture'] = data['picture']
-    login_session['email'] = data['email']
+    login_session['username'] = data.get('name', '')
+    login_session['picture'] = data.get('picture', '')
+    login_session['email'] = data.get('email', '')
     # ADD PROVIDER TO LOGIN SESSION
     login_session['provider'] = 'google'
 

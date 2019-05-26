@@ -8,6 +8,10 @@ Base = declarative_base()
 
 
 class User(Base):
+    """
+    Registered user information is stored in db
+    """
+
     __tablename__ = 'user'
 
     id = Column(Integer, primary_key=True)
@@ -17,13 +21,15 @@ class User(Base):
 
 
 class Category(Base):
-
+    """
+    Registered category information is stored in db
+    """
     __tablename__ = 'category'
 
     name = Column(String(80), nullable=False)
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer,ForeignKey('user.id'))
-    user = relationship(User)
+    user = relationship(User, cascade="delete")
 
     @property
     def serialize(self):
@@ -31,20 +37,23 @@ class Category(Base):
         return {
             'name': self.name,
             'id': self.id,
+            'user_id': self.user_id,
         }
 
 
 class CategoryItem(Base):
-
+    """
+    Registered category items information is stored in db
+    """
     __tablename__ = 'category_item'
 
     name = Column(String(80), nullable=False)
     id = Column(Integer, primary_key=True)
     description = Column(String(250))
     category_id = Column(Integer, ForeignKey('category.id'))
-    category = relationship(Category)
+    category = relationship(Category, cascade="delete")
     user_id = Column(Integer,ForeignKey('user.id'))
-    user = relationship(User)
+    user = relationship(User, cascade="delete")
 
     @property
     def serialize(self):
@@ -53,6 +62,8 @@ class CategoryItem(Base):
             'name': self.name,
             'description': self.description,
             'id': self.id,
+            'user_id': self.user_id,
+            'category_id': self.category_id,
         }
 
 
