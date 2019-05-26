@@ -14,7 +14,7 @@
       function start() {
         gapi.load('auth2', function() {
           auth2 = gapi.auth2.init({
-            client_id: '935322023230-5jksba7jk33q32ilkg8o78p4d9h3ajou.apps.googleusercontent.com'
+            client_id: "{{ CLIENT_ID }}"
           });
         });
       }

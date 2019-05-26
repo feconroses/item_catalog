@@ -1,8 +1,8 @@
-from flask import (Flask, 
-                   render_template, 
-                   request, 
-                   redirect, 
-                   url_for, 
+from flask import (Flask,
+                   render_template,
+                   request,
+                   redirect,
+                   url_for,
                    flash,
                    jsonify,
                    make_response,
@@ -10,18 +10,22 @@ from flask import (Flask,
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from database_setup import Base, Category, CategoryItem, User
+from oauth2client.client import flow_from_clientsecrets, FlowExchangeError
+from functools import wraps
 import random
 import string
-from oauth2client.client import flow_from_clientsecrets
-from oauth2client.client import FlowExchangeError
 import httplib2
 import json
-from functools import wraps
 import requests
 
-# Create a session and connect to a database
-# Using check_same_thread to avoid the exception thrown because using the same DBSession
-engine = create_engine('sqlite:///catalog.db', connect_args={'check_same_thread':False})
+
+"""
+Create a session and connect to a database.
+Using check_same_thread to avoid the exception thrown
+because using the same DBSession
+"""
+engine = create_engine('sqlite:///catalog.db',
+                       connect_args={'check_same_thread': False})
 Base.metadata.bind = engine
 
 # Initiate flask app instance
@@ -30,6 +34,7 @@ app = Flask(__name__)
 # Start the DB session
 DBSession = sessionmaker(bind=engine)
 session = DBSession()
+
 
 # function decorator to avoid unautheticated users
 def login_required(f):
@@ -61,17 +66,19 @@ def showCategories():
 @app.route('/categories/new', methods=['GET', 'POST'])
 @login_required
 def newCategory():
-    # looks for a post request
+    # Looks for a post request
     if request.method == 'POST':
-        # checks the creator information
-        user_id = getUserId(login_session['email'] )
+        # Checks the creator information
+        user_id = getUserId(login_session['email'])
 
-        # extracts the name field from my form using request.form
+        # Extracts the name field from my form using request.form
         newCategory = Category(name=request.form['name'], user_id=user_id)
         session.add(newCategory)
         session.commit()
         flash("New category created!")
         return redirect(url_for('showCategories'))
+
+    # If it's a get request
     else:
         return render_template('newcategory.html')
 
@@ -79,14 +86,31 @@ def newCategory():
 @app.route('/categories/<int:category_id>/edit', methods=['GET', 'POST'])
 @login_required
 def editCategory(category_id):
-    editedCategory = session.query(Category).filter_by(id=category_id).one_or_none()
+    # Get the category information
+    editedCategory = (session.query(Category).
+                      filter_by(id=category_id).one_or_none())
+
+    # Looks for a post request
     if request.method == 'POST':
-        if request.form['name']:
-            editedCategory.name = request.form['name']
-        session.add(editedCategory)
-        session.commit()
-        flash("Category has been edited!")
-        return redirect(url_for('showCategories'))
+
+        # Checks if the user is the owner of the item
+        user_id = getUserId(login_session['email'])
+        if user_id == editedCategory.user_id:
+
+            # Performs the edit action
+            if request.form['name']:
+                editedCategory.name = request.form['name']
+            session.add(editedCategory)
+            session.commit()
+            flash("Category has been edited!")
+            return redirect(url_for('showCategories'))
+
+        # User is not the owner of the category
+        else:
+            flash("You don't have authorization to edit this category!")
+            return redirect(url_for('showCategories'))
+
+    # If it's a get request
     else:
         return render_template('editcategory.html',
                                category_id=category_id,
@@ -96,12 +120,29 @@ def editCategory(category_id):
 @app.route('/categories/<int:category_id>/delete', methods=['GET', 'POST'])
 @login_required
 def deleteCategory(category_id):
-    deletedCategory = session.query(Category).filter_by(id=category_id).one_or_none()
+    # Get the category information
+    deletedCategory = (session.query(Category)
+                       .filter_by(id=category_id).one_or_none())
+
+    # Looks for a post request
     if request.method == 'POST':
-        session.delete(deletedCategory)
-        session.commit()
-        flash("Category has been deleted!")
-        return redirect(url_for('showCategories'))
+
+        # Checks if the user is the owner of the item
+        user_id = getUserId(login_session['email'])
+        if user_id == deletedCategory.user_id:
+
+            # Performs the delete action
+            session.delete(deletedCategory)
+            session.commit()
+            flash("Category has been deleted!")
+            return redirect(url_for('showCategories'))
+
+        # User is not the owner of the category
+        else:
+            flash("You don't have authorization to delete this category!")
+            return redirect(url_for('showCategories'))
+
+    # If it's a get request
     else:
         return render_template(
             'deletecategory.html', category=deletedCategory)
@@ -112,6 +153,7 @@ def deleteCategory(category_id):
 @app.route('/categories/<int:category_id>/')
 @app.route('/categories/<int:category_id>/all')
 def showCategory(category_id):
+    # Get the category and item information
     category = session.query(Category).filter_by(id=category_id).one_or_none()
     items = session.query(CategoryItem).filter_by(category_id=category.id)
 
@@ -126,12 +168,15 @@ def showCategory(category_id):
 @app.route('/categories/<int:category_id>/new', methods=['GET', 'POST'])
 @login_required
 def newCategoryItem(category_id):
-    # looks for a post request
-    newItemCategory = session.query(Category).filter_by(id=category_id).one_or_none()
+    # Get the item information
+    newItemCategory = (session.query(Category)
+                       .filter_by(id=category_id).one_or_none())
+
+    # Looks for a post request
     if request.method == 'POST':
-        
+
         # checks the creator information
-        user_id = getUserId(login_session['email'] )
+        user_id = getUserId(login_session['email'])
 
         # extracts the name field from my form using request.form
         newItem = CategoryItem(name=request.form['name'],
@@ -142,6 +187,8 @@ def newCategoryItem(category_id):
         session.commit()
         flash("New category item created!")
         return redirect(url_for('showCategory', category_id=category_id))
+
+    # If it's a get request
     else:
         return render_template('newcategoryitem.html',
                                category_id=category_id,
@@ -152,17 +199,35 @@ def newCategoryItem(category_id):
            methods=['GET', 'POST'])
 @login_required
 def editCategoryItem(category_id, item_id):
-    editItemCategory = session.query(Category).filter_by(id=category_id).one_or_none()
-    editedItem = session.query(CategoryItem).filter_by(id=item_id).one_or_none()
+    # Get the category and item information
+    editItemCategory = (session.query(Category)
+                        .filter_by(id=category_id).one_or_none())
+    editedItem = (session.query(CategoryItem)
+                  .filter_by(id=item_id).one_or_none())
+
+    # Looks for a post request
     if request.method == 'POST':
-        if request.form['name']:
-            editedItem.name = request.form['name']
-        if request.form['description']:
-            editedItem.description = request.form['description']
-        session.add(editedItem)
-        session.commit()
-        flash("Category item has been edited!")
-        return redirect(url_for('showCategory', category_id=category_id))
+
+        # Checks if the user is the owner of the item
+        user_id = getUserId(login_session['email'])
+        if user_id == editedItem.user_id:
+
+            # Performs the edit action
+            if request.form['name']:
+                editedItem.name = request.form['name']
+            if request.form['description']:
+                editedItem.description = request.form['description']
+            session.add(editedItem)
+            session.commit()
+            flash("Category item has been edited!")
+            return redirect(url_for('showCategory', category_id=category_id))
+
+        # User is not the owner of the item
+        else:
+            flash("You don't have authorization to edit this item!")
+            return redirect(url_for('showCategory', category_id=category_id))
+
+    # If it's a get request
     else:
         return render_template(
             'editcategoryitem.html', category_id=category_id,
@@ -173,13 +238,29 @@ def editCategoryItem(category_id, item_id):
            methods=['GET', 'POST'])
 @login_required
 def deleteCategoryItem(category_id, item_id):
+    # Get the category and item information
     delItemCategory = session.query(Category).filter_by(id=category_id).one()
     deletedItem = session.query(CategoryItem).filter_by(id=item_id).one()
+
+    # Looks for a post request
     if request.method == 'POST':
-        session.delete(deletedItem)
-        session.commit()
-        flash("Category item has been deleted!")
-        return redirect(url_for('showCategory', category_id=category_id))
+
+        # Checks if the user is the owner of the item
+        user_id = getUserId(login_session['email'])
+        if user_id == deletedItem.user_id:
+
+            # Performs the delete action
+            session.delete(deletedItem)
+            session.commit()
+            flash("Category item has been deleted!")
+            return redirect(url_for('showCategory', category_id=category_id))
+
+        # User is not the owner of the item
+        else:
+            flash("You don't have authorization to delete this item!")
+            return redirect(url_for('showCategory', category_id=category_id))
+
+    # If it's a get request
     else:
         return render_template(
             'deletecategoryitem.html', item=deletedItem,
@@ -221,27 +302,31 @@ def showLogin():
 
     login_session['state'] = state
     # return "The current session state is %s" % login_session['state']
-    return render_template('login.html', STATE=state)
+    return render_template('login.html', STATE=state, CLIENT_ID=CLIENT_ID)
 
 
+# Helper function for creating user
 def createUser(login_session):
-    newUser = User(name=login_session['username'], 
-                   email=login_session['email'], 
+    newUser = User(name=login_session['username'],
+                   email=login_session['email'],
                    picture=login_session['picture'])
     session.add(newUser)
     session.commit
-    user = session.query(User).filter_by(email=login_session['email']).one_or_none() 
+    user = (session.query(User)
+            .filter_by(email=login_session['email']).one_or_none())
     return user.id
 
 
+# Helper function for getting the user information
 def getUserInfo(user_id):
-    user = session.query(User).filter_by(id=user_id).one_or_none() 
+    user = session.query(User).filter_by(id=user_id).one_or_none()
     return user
 
 
+# Helper function for getting the user ID
 def getUserId(email):
     try:
-        user = session.query(User).filter_by(email=email).one_or_none() 
+        user = session.query(User).filter_by(email=email).one_or_none()
         if user:
             return user.id
         else:
