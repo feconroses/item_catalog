@@ -1,8 +1,10 @@
 # About
 
-Application that provides a list of items within a variety of categories as well as provide a user registration and authentication system. Registered users have the ability to post, edit and delete items and categories.
+Application that provides a list of items within a variety of categories as well as provide a user registration and authentication system. Registered users have the ability to post, edit and delete items and categories. 
 
-This is a RESTful web application that uses Python framework Flask, SQLite and Google OAuth authentication.
+The application also provides a JSON API for getting all the categories, obtaining the items in a particular category and getting tbe information about a specific item.
+
+This is a RESTful web application that uses Python framework Flask, SQLite and Google OAuth authentication. 
 
 # Requirements
 
